@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Ping pong games</title>
+    <title>Ping Pong Games</title>
     <style>
       @import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap");
 
@@ -27,8 +27,10 @@
 
       #game-container {
         position: relative;
-        width: 800px;
-        height: 500px;
+        width: 100vw;
+        max-width: 800px;
+        height: 60vw;
+        max-height: 500px;
         border: 2px solid #00fffc;
         box-shadow: 0 0 20px #00fffc, inset 0 0 20px #00fffc;
         overflow: hidden;
@@ -36,15 +38,18 @@
       }
 
       #game-canvas {
+        width: 100%;
+        height: 100%;
         background-color: transparent;
       }
 
       #score {
         display: flex;
         justify-content: space-between;
-        width: 800px;
+        width: 100%;
+        max-width: 800px;
         margin-bottom: 20px;
-        font-size: 24px;
+        font-size: clamp(16px, 5vw, 20px);
         text-shadow: 0 0 10px #00fffc;
       }
 
@@ -72,19 +77,19 @@
       }
 
       h1 {
-        font-size: 48px;
-        margin-bottom: 30px;
+        font-size: clamp(24px, 8vw, 36px);
+        margin-bottom: 20px;
         text-shadow: 0 0 15px #00fffc;
-        letter-spacing: 3px;
+        letter-spacing: 2px;
       }
 
       button {
         background-color: transparent;
         color: #00fffc;
         border: 2px solid #00fffc;
-        padding: 15px 30px;
+        padding: clamp(10px, 3vw, 12px) clamp(20px, 5vw, 25px);
         font-family: "Orbitron", sans-serif;
-        font-size: 18px;
+        font-size: clamp(14px, 4vw, 16px);
         cursor: pointer;
         margin: 10px;
         transition: all 0.3s;
@@ -128,7 +133,7 @@
 
       #instructions {
         margin-top: 20px;
-        font-size: 14px;
+        font-size: clamp(12px, 3vw, 14px);
         color: rgba(0, 255, 252, 0.7);
         text-align: center;
       }
@@ -142,13 +147,13 @@
 
     <div id="game-container">
       <div id="grid"></div>
-      <canvas id="game-canvas" width="800" height="500"></canvas>
+      <canvas id="game-canvas"></canvas>
 
       <div id="start-screen">
         <h1>Ping Pong Games</h1>
         <button id="start-button">START GAME</button>
         <div id="instructions">
-          USE MOUSE OR UP/DOWN ARROW KEYS TO MOVE PADDLE<br />
+          USE TOUCH OR UP/DOWN ARROW KEYS TO MOVE PADDLE<br />
           FIRST TO SCORE 5 WINS
         </div>
       </div>
@@ -200,6 +205,41 @@
       const paddleHeight = 100;
       const paddleSpeed = 8;
 
+      // Canvas scaling
+      let scaleFactorX, scaleFactorY;
+
+      function resizeCanvas() {
+        const container = document.getElementById("game-container");
+        const displayWidth = container.clientWidth;
+        const displayHeight = container.clientHeight;
+
+        canvas.style.width = `${displayWidth}px`;
+        canvas.style.height = `${displayHeight}px`;
+
+        const aspectRatio = 800 / 500;
+        canvas.width = displayWidth;
+        canvas.height = displayWidth / aspectRatio;
+
+        if (canvas.height > displayHeight) {
+          canvas.height = displayHeight;
+          canvas.width = displayHeight * aspectRatio;
+        }
+
+        scaleFactorX = canvas.width / 800;
+        scaleFactorY = canvas.height / 500;
+
+        // Update paddle and ball sizes
+        playerPaddle.width = paddleWidth * scaleFactorX;
+        playerPaddle.height = paddleHeight * scaleFactorY;
+        playerPaddle.x = 30 * scaleFactorX;
+        aiPaddle.width = paddleWidth * scaleFactorX;
+        aiPaddle.height = paddleHeight * scaleFactorY;
+        aiPaddle.x = canvas.width - 30 * scaleFactorX - aiPaddle.width;
+        ball.width = ballSize * scaleFactorX;
+        ball.height = ballSize * scaleFactorY;
+      }
+
+      // Initialize paddles and ball
       const playerPaddle = {
         x: 30,
         y: canvas.height / 2 - paddleHeight / 2,
@@ -253,7 +293,7 @@
       // Draw functions
       function drawPaddle(x, y, width, height) {
         ctx.fillStyle = "#00fffc";
-        ctx.shadowBlur = 15;
+        ctx.shadowBlur = 15 * scaleFactorX;
         ctx.shadowColor = "#00fffc";
         ctx.fillRect(x, y, width, height);
         ctx.shadowBlur = 0;
@@ -261,7 +301,7 @@
 
       function drawBall(x, y, width, height) {
         ctx.fillStyle = "#ff00f7";
-        ctx.shadowBlur = 15;
+        ctx.shadowBlur = 15 * scaleFactorX;
         ctx.shadowColor = "#ff00f7";
         ctx.beginPath();
         ctx.arc(x + width / 2, y + height / 2, width / 2, 0, Math.PI * 2);
@@ -277,7 +317,7 @@
           ctx.arc(
             trail[i].x,
             trail[i].y,
-            (ballSize / 2) * opacity,
+            (ballSize / 2) * opacity * scaleFactorX,
             0,
             Math.PI * 2
           );
@@ -288,10 +328,14 @@
       function drawParticles() {
         particles.forEach((particle) => {
           ctx.fillStyle = `rgba(0, 255, 252, ${Math.random() * 0.5})`;
-          ctx.fillRect(particle.x, particle.y, particle.size, particle.size);
+          ctx.fillRect(
+            particle.x,
+            particle.y,
+            particle.size * scaleFactorX,
+            particle.size * scaleFactorY
+          );
 
-          // Move particles
-          particle.y += particle.speed;
+          particle.y += particle.speed * scaleFactorY;
           if (particle.y > canvas.height) {
             particle.y = 0;
             particle.x = Math.random() * canvas.width;
@@ -301,8 +345,8 @@
 
       function drawCenterLine() {
         ctx.strokeStyle = "rgba(0, 255, 252, 0.2)";
-        ctx.lineWidth = 2;
-        ctx.setLineDash([10, 10]);
+        ctx.lineWidth = 2 * scaleFactorX;
+        ctx.setLineDash([10 * scaleFactorX, 10 * scaleFactorX]);
         ctx.beginPath();
         ctx.moveTo(canvas.width / 2, 0);
         ctx.lineTo(canvas.width / 2, canvas.height);
@@ -313,7 +357,7 @@
       // Game logic
       function update() {
         // Move player paddle
-        playerPaddle.y += playerPaddle.dy;
+        playerPaddle.y += playerPaddle.dy * scaleFactorY;
 
         // Keep paddles within canvas
         if (playerPaddle.y < 0) playerPaddle.y = 0;
@@ -321,14 +365,14 @@
           playerPaddle.y = canvas.height - playerPaddle.height;
         }
 
-        // AI paddle movement (simple tracking)
+        // AI paddle movement
         const aiPaddleCenter = aiPaddle.y + aiPaddle.height / 2;
         const ballCenter = ball.y + ball.height / 2;
 
-        if (aiPaddleCenter < ballCenter - 10) {
-          aiPaddle.dy = paddleSpeed * 0.7;
-        } else if (aiPaddleCenter > ballCenter + 10) {
-          aiPaddle.dy = -paddleSpeed * 0.7;
+        if (aiPaddleCenter < ballCenter - 10 * scaleFactorY) {
+          aiPaddle.dy = paddleSpeed * 0.7 * scaleFactorY;
+        } else if (aiPaddleCenter > ballCenter + 10 * scaleFactorY) {
+          aiPaddle.dy = -paddleSpeed * 0.7 * scaleFactorY;
         } else {
           aiPaddle.dy = 0;
         }
@@ -365,22 +409,18 @@
           ball.y < playerPaddle.y + playerPaddle.height &&
           ball.y + ball.height > playerPaddle.y
         ) {
-          // Calculate angle based on where ball hits paddle
           const hitPosition =
             ball.y +
             ball.height / 2 -
             (playerPaddle.y + playerPaddle.height / 2);
-          const normalizedHit = hitPosition / (paddleHeight / 2);
-          ball.dy = normalizedHit * 5;
-
-          ball.dx = Math.abs(ball.dx); // Ensure ball moves right
-          ball.dx *= 1.05; // Increase speed slightly
+          const normalizedHit = hitPosition / (playerPaddle.height / 2);
+          ball.dy = normalizedHit * 5 * scaleFactorY;
+          ball.dx = Math.abs(ball.dx);
+          ball.dx *= 1.05;
 
           paddleHitSound.currentTime = 0;
           paddleHitSound.play();
-
-          // Add some randomness
-          ball.dy += (Math.random() * 2 - 1) * 0.5;
+          ball.dy += (Math.random() * 2 - 1) * 0.5 * scaleFactorY;
         }
 
         if (
@@ -389,44 +429,36 @@
           ball.y < aiPaddle.y + aiPaddle.height &&
           ball.y + ball.height > aiPaddle.y
         ) {
-          // Calculate angle based on where ball hits paddle
           const hitPosition =
             ball.y + ball.height / 2 - (aiPaddle.y + aiPaddle.height / 2);
-          const normalizedHit = hitPosition / (paddleHeight / 2);
-          ball.dy = normalizedHit * 5;
-
-          ball.dx = -Math.abs(ball.dx); // Ensure ball moves left
-          ball.dx *= 1.05; // Increase speed slightly
+          const normalizedHit = hitPosition / (aiPaddle.height / 2);
+          ball.dy = normalizedHit * 5 * scaleFactorY;
+          ball.dx = -Math.abs(ball.dx);
+          ball.dx *= 1.05;
 
           paddleHitSound.currentTime = 0;
           paddleHitSound.play();
-
-          // Add some randomness
-          ball.dy += (Math.random() * 2 - 1) * 0.5;
+          ball.dy += (Math.random() * 2 - 1) * 0.5 * scaleFactorY;
         }
 
         // Ball out of bounds (scoring)
         if (ball.x + ball.width < 0) {
-          // AI scores
           aiScore++;
           aiScoreDisplay.textContent = `AI: ${aiScore}`;
           resetBall();
           scoreSound.currentTime = 0;
           scoreSound.play();
-
           if (aiScore >= winningScore) {
             endGame(false);
           }
         }
 
         if (ball.x > canvas.width) {
-          // Player scores
           playerScore++;
           playerScoreDisplay.textContent = `PLAYER: ${playerScore}`;
           resetBall();
           scoreSound.currentTime = 0;
           scoreSound.play();
-
           if (playerScore >= winningScore) {
             endGame(true);
           }
@@ -436,24 +468,15 @@
       function resetBall() {
         ball.x = canvas.width / 2 - ball.width / 2;
         ball.y = canvas.height / 2 - ball.height / 2;
-
-        // Random direction
-        ball.dx = (Math.random() > 0.5 ? 1 : -1) * 5;
-        ball.dy = Math.random() * 4 - 2;
-
-        // Clear trail
+        ball.dx = (Math.random() > 0.5 ? 1 : -1) * 5 * scaleFactorX;
+        ball.dy = (Math.random() * 4 - 2) * scaleFactorY;
         trail.length = 0;
       }
 
       function render() {
-        // Clear canvas
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // Draw background elements
         drawParticles();
         drawCenterLine();
-
-        // Draw game elements
         drawTrail();
         drawPaddle(
           playerPaddle.x,
@@ -473,12 +496,19 @@
         }
       }
 
-      // Game control functions
       function startGame() {
         playerScore = 0;
         aiScore = 0;
         playerScoreDisplay.textContent = `PLAYER: ${playerScore}`;
         aiScoreDisplay.textContent = `AI: ${aiScore}`;
+
+        // Preload audio
+        paddleHitSound.play().catch(() => {});
+        paddleHitSound.pause();
+        wallHitSound.play().catch(() => {});
+        wallHitSound.pause();
+        scoreSound.play().catch(() => {});
+        scoreSound.pause();
 
         resetBall();
         startScreen.style.display = "none";
@@ -518,13 +548,39 @@
       canvas.addEventListener("mousemove", (e) => {
         const rect = canvas.getBoundingClientRect();
         const mouseY = e.clientY - rect.top - playerPaddle.height / 2;
+        const scaledMouseY = (mouseY / rect.height) * canvas.height;
 
-        if (mouseY >= 0 && mouseY <= canvas.height - playerPaddle.height) {
-          playerPaddle.y = mouseY;
+        if (
+          scaledMouseY >= 0 &&
+          scaledMouseY <= canvas.height - playerPaddle.height
+        ) {
+          playerPaddle.y = scaledMouseY;
         }
       });
 
+      // Touch controls
+      canvas.addEventListener("touchmove", (e) => {
+        e.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        const touchY =
+          e.touches[0].clientY - rect.top - playerPaddle.height / 2;
+        const scaledTouchY = (touchY / rect.height) * canvas.height;
+
+        if (
+          scaledTouchY >= 0 &&
+          scaledTouchY <= canvas.height - playerPaddle.height
+        ) {
+          playerPaddle.y = scaledTouchY;
+        }
+      });
+
+      canvas.addEventListener("touchstart", (e) => {
+        e.preventDefault();
+      });
+
       // Initialize
+      resizeCanvas();
+      window.addEventListener("resize", resizeCanvas);
       particles = createParticles();
     </script>
     <p
